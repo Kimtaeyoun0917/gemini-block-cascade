@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gemini AI Block Cascade</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800&family=Noto+Sans+KR:wght@300;400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            touch-action: manipulation;
+        }
+        
+        .font-arcade {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Canvas glow effects */
+        canvas {
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.25);
+        }
+
+        /* Glassmorphism background */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Keycaps visual style */
+        kbd {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        /* AI Speech bubble triangle */
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: rgba(30, 41, 59, 0.9) transparent;
+            display: block;
+            width: 0;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between items-center p-2 sm:p-4 select-none">
+
+    <!-- Header / Navbar -->
+    <header class="w-full max-w-4xl flex justify-between items-center py-2 px-4 glass-panel rounded-2xl mb-4">
+        <div class="flex items-center space-x-3">
+            <div class="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 rounded-xl text-white shadow-lg">
+                <i class="fa-solid fa-shapes text-xl sm:text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-lg sm:text-2xl font-extrabold font-arcade bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400">
+                    BLOCK CASCADE
+                </h1>
+                <p class="text-xs text-slate-400 hidden sm:block">Powered by Gemini AI Companion</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-2">
+            <button id="soundToggleBtn" onclick="toggleSound()" class="p-2.5 rounded-xl glass-panel hover:bg-slate-700/50 transition text-slate-300 hover:text-white" title="사운드 토글">
+                <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+            </button>
+            <button onclick="openSettingsModal()" class="p-2.5 rounded-xl glass-panel hover:bg-slate-700/50 transition text-indigo-400 hover:text-indigo-300" title="Gemini API 설정">
+                <i class="fa-solid fa-key"></i>
+            </button>
+            <button onclick="toggleHelpModal()" class="p-2.5 rounded-xl glass-panel hover:bg-slate-700/50 transition text-slate-300 hover:text-white" title="조작법">
+                <i class="fa-solid fa-circle-question"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Workspace -->
+    <main class="w-full max-w-4xl flex flex-col lg:flex-row gap-4 items-center lg:items-start justify-center flex-1">
+        
+        <!-- Left Side: AI Commentary & Stats -->
+        <div class="w-full lg:w-72 flex flex-col gap-4 order-2 lg:order-1">
+            
+            <!-- Gemini AI Box -->
+            <div class="glass-panel p-4 rounded-2xl relative">
+                <div class="flex items-center space-x-2 mb-2">
+                    <span class="relative flex h-3 w-3">
+                        <span id="aiPulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span id="aiStatusDot" class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    </span>
+                    <span class="text-xs font-bold text-indigo-300 uppercase tracking-wider">Gemini AI Coach</span>
+                </div>
+                <div id="aiCommentaryBox" class="text-xs sm:text-sm text-slate-200 min-h-[70px] leading-relaxed flex items-center">
+                    "게임을 시작해보세요! Gemini가 실시간으로 플레이를 분석하고 응원해드립니다."
+                </div>
+            </div>
+
+            <!-- Dashboard Stats -->
+            <div class="glass-panel p-4 rounded-2xl grid grid-cols-3 lg:grid-cols-1 gap-3">
+                <div class="p-2 bg-slate-800/50 rounded-xl text-center lg:text-left border border-slate-700/50">
+                    <span class="text-[10px] text-slate-400 uppercase font-arcade block">Score</span>
+                    <span id="scoreText" class="text-lg sm:text-2xl font-bold font-arcade text-emerald-400">0</span>
+                </div>
+                <div class="p-2 bg-slate-800/50 rounded-xl text-center lg:text-left border border-slate-700/50">
+                    <span class="text-[10px] text-slate-400 uppercase font-arcade block">Level</span>
+                    <span id="levelText" class="text-lg sm:text-2xl font-bold font-arcade text-indigo-400">1</span>
+                </div>
+                <div class="p-2 bg-slate-800/50 rounded-xl text-center lg:text-left border border-slate-700/50">
+                    <span class="text-[10px] text-slate-400 uppercase font-arcade block">Lines</span>
+                    <span id="linesText" class="text-lg sm:text-2xl font-bold font-arcade text-purple-400">0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center: Game Canvas -->
+        <div class="relative order-1 lg:order-2 flex flex-col items-center">
+            <div class="relative rounded-2xl overflow-hidden border-2 border-indigo-500/30 bg-slate-950">
+                <canvas id="tetrisCanvas" width="240" height="480" class="block"></canvas>
+                
+                <!-- Game Over Overlay -->
+                <div id="gameOverOverlay" class="hidden absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-fade-in z-20">
+                    <i class="fa-solid fa-trophy text-amber-400 text-4xl mb-3 animate-bounce"></i>
+                    <h2 class="text-2xl font-extrabold font-arcade text-rose-500 mb-1">GAME OVER</h2>
+                    <p id="finalScoreText" class="text-sm text-slate-300 mb-4">최종 점수: 0</p>
+                    <button onclick="startGame()" class="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 font-bold rounded-xl shadow-lg shadow-indigo-500/30 transition transform active:scale-95 flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-right"></i> 다시 도전하기
+                    </button>
+                </div>
+
+                <!-- Pause Overlay -->
+                <div id="pauseOverlay" class="hidden absolute inset-0 bg-slate-950/70 backdrop-blur-sm flex flex-col items-center justify-center z-10">
+                    <h2 class="text-3xl font-extrabold font-arcade text-amber-400 tracking-wider">PAUSED</h2>
+                    <p class="text-xs text-slate-400 mt-2">P 키 또는 일시정지 버튼을 누르세요</p>
+                </div>
+            </div>
+
+            <!-- Quick Play / Pause Control Buttons -->
+            <div class="flex gap-2 mt-3 w-full justify-center">
+                <button id="startBtn" onclick="startGame()" class="flex-1 py-2.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-md transition text-sm flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-play"></i> <span id="startBtnText">게임 시작</span>
+                </button>
+                <button id="pauseBtn" onclick="togglePause()" disabled class="py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 font-bold rounded-xl transition text-sm">
+                    <i id="pauseIcon" class="fa-solid fa-pause"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Right Side: Hold & Next Block Previews -->
+        <div class="w-full lg:w-48 flex lg:flex-col justify-between lg:justify-start gap-4 order-3">
+            <!-- Hold Canvas -->
+            <div class="glass-panel p-3 rounded-2xl flex-1 lg:flex-none flex flex-col items-center">
+                <span class="text-xs font-bold text-slate-400 uppercase font-arcade mb-2">HOLD (C)</span>
+                <canvas id="holdCanvas" width="90" height="90" class="bg-slate-900/60 rounded-xl border border-slate-800"></canvas>
+            </div>
+            
+            <!-- Next Piece Canvas -->
+            <div class="glass-panel p-3 rounded-2xl flex-1 lg:flex-none flex flex-col items-center">
+                <span class="text-xs font-bold text-slate-400 uppercase font-arcade mb-2">NEXT</span>
+                <canvas id="nextCanvas" width="90" height="90" class="bg-slate-900/60 rounded-xl border border-slate-800"></canvas>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile On-Screen Controller (Visible on touch/small screens) -->
+    <div class="w-full max-w-sm mt-4 grid grid-cols-3 gap-2 lg:hidden">
+        <button ontouchstart="handleTouch('HOLD')" class="p-3 bg-slate-800/80 active:bg-indigo-600 rounded-xl text-slate-200 font-bold text-xs flex flex-col items-center">
+            <i class="fa-solid fa-hand text-base mb-1"></i> HOLD
+        </button>
+        <button ontouchstart="handleTouch('ROTATE')" class="p-3 bg-indigo-600/80 active:bg-indigo-500 rounded-xl text-white font-bold text-xs flex flex-col items-center col-span-2">
+            <i class="fa-solid fa-rotate-right text-base mb-1"></i> ROTATE
+        </button>
+        <button ontouchstart="handleTouch('LEFT')" class="p-4 bg-slate-800/80 active:bg-indigo-600 rounded-xl text-white text-lg flex justify-center items-center">
+            <i class="fa-solid fa-arrow-left"></i>
+        </button>
+        <button ontouchstart="handleTouch('DOWN')" class="p-4 bg-slate-800/80 active:bg-indigo-600 rounded-xl text-white text-lg flex justify-center items-center">
+            <i class="fa-solid fa-arrow-down"></i>
+        </button>
+        <button ontouchstart="handleTouch('RIGHT')" class="p-4 bg-slate-800/80 active:bg-indigo-600 rounded-xl text-white text-lg flex justify-center items-center">
+            <i class="fa-solid fa-arrow-right"></i>
+        </button>
+        <button ontouchstart="handleTouch('HARD_DROP')" class="p-3 bg-purple-600 active:bg-purple-500 rounded-xl text-white font-bold text-xs col-span-3 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-angles-down"></i> HARD DROP
+        </button>
+    </div>
+
+    <!-- Gemini API Key Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-indigo-500/30">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-key text-indigo-400"></i> Gemini API 설정
+                </h3>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <p class="text-xs text-slate-300 mb-4 leading-relaxed">
+                Google AI Studio에서 발급받은 API 키를 입력하면 게임 상황에 따라 실시간 AI 위트 코멘트와 코칭을 받으실 수 있습니다.
+            </p>
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-slate-400 mb-1">GEMINI API KEY</label>
+                <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-indigo-500">
+            </div>
+            <div class="text-[11px] text-amber-400/90 mb-4 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                <i class="fa-solid fa-shield-halved mr-1"></i> API 키는 사용자의 브라우저(LocalStorage)에만 안전하게 저장되며 외부 서버로 전송되지 않습니다.
+            </div>
+            <div class="flex gap-2">
+                <button onclick="saveApiKey()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm transition">
+                    저장하기
+                </button>
+                <button onclick="clearApiKey()" class="py-2 px-3 bg-slate-800 hover:bg-slate-700 text-rose-400 font-bold rounded-xl text-sm transition">
+                    삭제
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-2xl border border-slate-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-keyboard text-indigo-400"></i> 조작 방법
+                </h3>
+                <button onclick="toggleHelpModal()" class="text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="space-y-2 text-xs text-slate-300">
+                <div class="flex justify-between p-2 bg-slate-800/50 rounded-lg"><span>좌 / 우 이동</span> <span class="font-mono text-indigo-300"><kbd>←</kbd> <kbd>→</kbd></span></div>
+                <div class="flex justify-between p-2 bg-slate-800/50 rounded-lg"><span>블록 회전</span> <span class="font-mono text-indigo-300"><kbd>↑</kbd> 또는 <kbd>Z</kbd> / <kbd>X</kbd></span></div>
+                <div class="flex justify-between p-2 bg-slate-800/50 rounded-lg"><span>소프트 드롭</span> <span class="font-mono text-indigo-300"><kbd>↓</kbd></span></div>
+                <div class="flex justify-between p-2 bg-slate-800/50 rounded-lg"><span>하드 드롭 (즉시 낙하)</span> <span class="font-mono text-indigo-300"><kbd>Space</kbd></span></div>
+                <div class="flex justify-between p-2 bg-slate-800/50 rounded-lg"><span>블록 홀드 (보관)</span> <span class="font-mono text-indigo-300"><kbd>C</kbd> 또는 <kbd>Shift</kbd></span></div>
+                <div class="flex justify-between p-2 bg-slate-800/50 rounded-lg"><span>일시정지</span> <span class="font-mono text-indigo-300"><kbd>P</kbd></span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- GAME CONFIGURATION & CONSTANTS ---
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 24; // 240x480 canvas size
+        
+        // Block Palette (Copyright-safe custom themes)
+        const SHAPES = [
+            [], // Empty
+            [[1, 1, 1, 1]], // I (Cyan)
+            [[1, 0, 0], [1, 1, 1]], // J (Blue)
+            [[0, 0, 1], [1, 1, 1]], // L (Orange)
+            [[1, 1], [1, 1]], // O (Yellow)
+            [[0, 1, 1], [1, 1, 0]], // S (Green)
+            [[0, 1, 0], [1, 1, 1]], // T (Purple)
+            [[1, 1, 0], [0, 1, 1]]  // Z (Red)
+        ];
+
+        const COLORS = [
+            'transparent',
+            '#06b6d4', // I - Cyan
+            '#3b82f6', // J - Blue
+            '#f97316', // L - Orange
+            '#eab308', // O - Yellow
+            '#22c55e', // S - Green
+            '#a855f7', // T - Purple
+            '#ef4444'  // Z - Red
+        ];
+
+        // System State
+        let canvas, ctx, holdCanvas, holdCtx, nextCanvas, nextCtx;
+        let grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+        
+        let currentPiece = null;
+        let nextPiece = null;
+        let holdPiece = null;
+        let canHold = true;
+        
+        let score = 0;
+        let level = 1;
+        let linesCleared = 0;
+        
+        let gameOver = false;
+        let isPaused = false;
+        let isPlaying = false;
+        
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let animationFrameId = null;
+
+        let soundEnabled = true;
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                initAudio();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'move') {
+                    osc.frequency.setValueAtTime(300, now);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'drop') {
+                    osc.frequency.setValueAtTime(150, now);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'clear') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'gameover') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.linearRampToValueAtTime(100, now + 0.4);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                    osc.start(now);
+                    osc.stop(now + 0.4);
+                }
+            } catch (e) {
+                console.error("Audio playback error:", e);
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundIcon').className = soundEnabled ? 'fa-solid fa-volume-high' : 'fa-solid fa-volume-xmark';
+        }
+
+        class Piece {
+            constructor(typeIndex) {
+                this.typeIndex = typeIndex;
+                this.shape = SHAPES[typeIndex];
+                this.color = COLORS[typeIndex];
+                this.x = Math.floor((COLS - this.shape[0].length) / 2);
+                this.y = 0;
+            }
+        }
+
+        function createRandomPiece() {
+            const index = Math.floor(Math.random() * 7) + 1;
+            return new Piece(index);
+        }
+
+        function collide(testPiece, offX = 0, offY = 0, customShape = null) {
+            const shape = customShape || testPiece.shape;
+            for (let r = 0; r < shape.length; r++) {
+                for (let c = 0; c < shape[r].length; c++) {
+                    if (shape[r][c] !== 0) {
+                        let newX = testPiece.x + c + offX;
+                        let newY = testPiece.y + r + offY;
+                        
+                        if (newX < 0 || newX >= COLS || newY >= ROWS) {
+                            return true;
+                        }
+                        if (newY >= 0 && grid[newY][newX] !== 0) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function mergePiece() {
+            currentPiece.shape.forEach((row, r) => {
+                row.forEach((value, c) => {
+                    if (value !== 0) {
+                        let targetY = currentPiece.y + r;
+                        if (targetY >= 0) {
+                            grid[targetY][currentPiece.x + c] = currentPiece.typeIndex;
+                        }
+                    }
+                });
+            });
+        }
+
+        function rotateMatrix(matrix) {
+            const N = matrix.length;
+            const M = matrix[0].length;
+            let result = Array.from({ length: M }, () => Array(N).fill(0));
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < M; c++) {
+                    result[c][N - 1 - r] = matrix[r][c];
+                }
+            }
+            return result;
+        }
+
+        function playerRotate() {
+            if (!isPlaying || isPaused || gameOver) return;
+            const rotated = rotateMatrix(currentPiece.shape);
+            let offset = 0;
+            if (!collide(currentPiece, 0, 0, rotated)) {
+                currentPiece.shape = rotated;
+                playSound('move');
+                return;
+            }
+            // Simple Wall Kick
+            if (!collide(currentPiece, 1, 0, rotated)) {
+                currentPiece.x += 1;
+                currentPiece.shape = rotated;
+                playSound('move');
+                return;
+            }
+            if (!collide(currentPiece, -1, 0, rotated)) {
+                currentPiece.x -= 1;
+                currentPiece.shape = rotated;
+                playSound('move');
+                return;
+            }
+        }
+
+        function clearLines() {
+            let linesClearedInStep = 0;
+            for (let r = ROWS - 1; r >= 0; r--) {
+                if (grid[r].every(cell => cell !== 0)) {
+                    grid.splice(r, 1);
+                    grid.unshift(Array(COLS).fill(0));
+                    linesClearedInStep++;
+                    r++; // Re-check row index
+                }
+            }
+
+            if (linesClearedInStep > 0) {
+                playSound('clear');
+                linesCleared += linesClearedInStep;
+                
+                // Scoring System
+                const points = [0, 100, 300, 500, 800];
+                score += (points[linesClearedInStep] || 1000) * level;
+                
+                level = Math.floor(linesCleared / 10) + 1;
+                dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+
+                updateUI();
+                
+                // Trigger AI commentary on Tetris (4 lines) or milestone
+                if (linesClearedInStep === 4) {
+                    triggerAiCommentary('TETRIS');
+                } else if (score >= 1000 && score < 2000) {
+                    triggerAiCommentary('SCORE_MILESTONE');
+                }
+            }
+        }
+
+        function playerHold() {
+            if (!isPlaying || isPaused || gameOver || !canHold) return;
+            playSound('move');
+            if (holdPiece === null) {
+                holdPiece = currentPiece.typeIndex;
+                currentPiece = nextPiece;
+                nextPiece = createRandomPiece();
+            } else {
+                let temp = holdPiece;
+                holdPiece = currentPiece.typeIndex;
+                currentPiece = new Piece(temp);
+            }
+            canHold = false;
+            drawSideCanvases();
+        }
+
+        function drawBlock(ctx, x, y, colorIndex, isGhost = false) {
+            if (colorIndex === 0) return;
+            const px = x * BLOCK_SIZE;
+            const py = y * BLOCK_SIZE;
+
+            if (isGhost) {
+                ctx.strokeStyle = COLORS[colorIndex];
+                ctx.lineWidth = 1.5;
+                ctx.strokeRect(px + 2, py + 2, BLOCK_SIZE - 4, BLOCK_SIZE - 4);
+                return;
+            }
+
+            ctx.fillStyle = COLORS[colorIndex];
+            ctx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, BLOCK_SIZE - 2);
+
+            // Subtle highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.fillRect(px + 1, py + 1, BLOCK_SIZE - 2, 3);
+        }
+
+        function draw() {
+            // Clear main canvas
+            ctx.fillStyle = '#020617';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            for (let c = 0; c < COLS; c++) {
+                ctx.beginPath();
+                ctx.moveTo(c * BLOCK_SIZE, 0);
+                ctx.lineTo(c * BLOCK_SIZE, canvas.height);
+                ctx.stroke();
+            }
+            for (let r = 0; r < ROWS; r++) {
+                ctx.beginPath();
+                ctx.moveTo(0, r * BLOCK_SIZE);
+                ctx.lineTo(canvas.width, r * BLOCK_SIZE);
+                ctx.stroke();
+            }
+
+            // Draw stacked blocks
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    drawBlock(ctx, c, r, grid[r][c]);
+                }
+            }
+
+            if (currentPiece) {
+                // Ghost Piece Projection
+                let ghostY = currentPiece.y;
+                while (!collide(currentPiece, 0, ghostY - currentPiece.y + 1)) {
+                    ghostY++;
+                }
+                currentPiece.shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value !== 0) {
+                            drawBlock(ctx, currentPiece.x + c, ghostY + r, currentPiece.typeIndex, true);
+                        }
+                    });
+                });
+
+                // Active Piece
+                currentPiece.shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value !== 0) {
+                            drawBlock(ctx, currentPiece.x + c, currentPiece.y + r, currentPiece.typeIndex);
+                        }
+                    });
+                });
+            }
+        }
+
+        function drawSideCanvases() {
+            // Draw Next Piece
+            nextCtx.fillStyle = '#090d16';
+            nextCtx.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+            if (nextPiece) {
+                const shape = nextPiece.shape;
+                const offsetX = (nextCanvas.width - shape[0].length * 18) / 2;
+                const offsetY = (nextCanvas.height - shape.length * 18) / 2;
+                shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value !== 0) {
+                            nextCtx.fillStyle = COLORS[nextPiece.typeIndex];
+                            nextCtx.fillRect(offsetX + c * 18, offsetY + r * 18, 16, 16);
+                        }
+                    });
+                });
+            }
+
+            // Draw Hold Piece
+            holdCtx.fillStyle = '#090d16';
+            holdCtx.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
+            if (holdPiece) {
+                const shape = SHAPES[holdPiece];
+                const offsetX = (holdCanvas.width - shape[0].length * 18) / 2;
+                const offsetY = (holdCanvas.height - shape.length * 18) / 2;
+                shape.forEach((row, r) => {
+                    row.forEach((value, c) => {
+                        if (value !== 0) {
+                            holdCtx.fillStyle = COLORS[holdPiece];
+                            holdCtx.fillRect(offsetX + c * 18, offsetY + r * 18, 16, 16);
+                        }
+                    });
+                });
+            }
+        }
+
+        function drop() {
+            if (!isPlaying || isPaused || gameOver) return;
+            
+            if (!collide(currentPiece, 0, 1)) {
+                currentPiece.y++;
+            } else {
+                playSound('drop');
+                mergePiece();
+                clearLines();
+                
+                currentPiece = nextPiece;
+                nextPiece = createRandomPiece();
+                canHold = true;
+                drawSideCanvases();
+
+                if (collide(currentPiece)) {
+                    triggerGameOver();
+                    return;
+                }
+            }
+            dropCounter = 0;
+        }
+
+        function hardDrop() {
+            if (!isPlaying || isPaused || gameOver) return;
+            while (!collide(currentPiece, 0, 1)) {
+                currentPiece.y++;
+                score += 2;
+            }
+            drop();
+            updateUI();
+        }
+
+        function update(time = 0) {
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            dropCounter += deltaTime;
+            if (dropCounter > dropInterval) {
+                drop();
+            }
+
+            draw();
+            if (isPlaying && !gameOver) {
+                animationFrameId = requestAnimationFrame(update);
+            }
+        }
+
+        function startGame() {
+            grid = Array.from({ length: ROWS }, () => Array(COLS).fill(0));
+            score = 0;
+            level = 1;
+            linesCleared = 0;
+            gameOver = false;
+            isPaused = false;
+            isPlaying = true;
+            dropInterval = 1000;
+
+            currentPiece = createRandomPiece();
+            nextPiece = createRandomPiece();
+            holdPiece = null;
+            canHold = true;
+
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('pauseOverlay').classList.add('hidden');
+            document.getElementById('startBtnText').innerText = '재시작';
+            document.getElementById('pauseBtn').disabled = false;
+
+            updateUI();
+            drawSideCanvases();
+            
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            lastTime = performance.now();
+            update();
+
+            triggerAiCommentary('START');
+        }
+
+        function togglePause() {
+            if (!isPlaying || gameOver) return;
+            isPaused = !isPaused;
+            document.getElementById('pauseOverlay').classList.toggle('hidden', !isPaused);
+            document.getElementById('pauseIcon').className = isPaused ? 'fa-solid fa-play' : 'fa-solid fa-pause';
+            if (!isPaused) {
+                lastTime = performance.now();
+                update();
+            }
+        }
+
+        function triggerGameOver() {
+            gameOver = true;
+            isPlaying = false;
+            playSound('gameover');
+            document.getElementById('finalScoreText').innerText = `최종 점수: ${score}점 (${linesCleared} 줄)`;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+            triggerAiCommentary('GAMEOVER');
+        }
+
+        function updateUI() {
+            document.getElementById('scoreText').innerText = score;
+            document.getElementById('levelText').innerText = level;
+            document.getElementById('linesText').innerText = linesCleared;
+        }
+
+        function moveLeft() {
+            if (!isPlaying || isPaused || gameOver) return;
+            if (!collide(currentPiece, -1, 0)) {
+                currentPiece.x--;
+                playSound('move');
+            }
+        }
+
+        function moveRight() {
+            if (!isPlaying || isPaused || gameOver) return;
+            if (!collide(currentPiece, 1, 0)) {
+                currentPiece.x++;
+                playSound('move');
+            }
+        }
+
+        function handleTouch(action) {
+            initAudio();
+            switch (action) {
+                case 'LEFT': moveLeft(); break;
+                case 'RIGHT': moveRight(); break;
+                case 'DOWN': drop(); break;
+                case 'ROTATE': playerRotate(); break;
+                case 'HARD_DROP': hardDrop(); break;
+                case 'HOLD': playerHold(); break;
+            }
+        }
+
+        window.addEventListener('keydown', e => {
+            if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
+                e.preventDefault(); // Prevent page scrolling
+            }
+            if (!isPlaying || gameOver) return;
+
+            initAudio();
+
+            switch (e.code) {
+                case 'ArrowLeft': moveLeft(); break;
+                case 'ArrowRight': moveRight(); break;
+                case 'ArrowDown': drop(); break;
+                case 'ArrowUp':
+                case 'KeyZ':
+                case 'KeyX': playerRotate(); break;
+                case 'Space': hardDrop(); break;
+                case 'KeyC':
+                case 'ShiftLeft':
+                case 'ShiftRight': playerHold(); break;
+                case 'KeyP': togglePause(); break;
+            }
+        });
+
+        async function triggerAiCommentary(event) {
+            const apiKey = localStorage.getItem('gemini_api_key');
+            const aiBox = document.getElementById('aiCommentaryBox');
+
+            if (!apiKey) {
+                if (event === 'START') {
+                    aiBox.innerHTML = "<span class='text-slate-400'>💡 상단 🔑 버튼을 눌러 Gemini API 키를 등록하면 실시간 AI 코칭을 받으실 수 있습니다.</span>";
+                }
+                return;
+            }
+
+            const promptMap = {
+                'START': `게임이 시작되었습니다! 플레이어를 열정적으로 응원하는 1문장 아케이드 코멘트를 한국어로 짧게 써주세요.`,
+                'TETRIS': `플레이어가 한 번에 4줄을 동시에 없애는 'TETRIS'를 성공했습니다! 점수: ${score}. 극찬과 신나는 반응을 1문장으로 써주세요.`,
+                'SCORE_MILESTONE': `플레이어가 점수 ${score}점을 돌파했습니다! 칭찬의 한마디를 1문장으로 써주세요.`,
+                'GAMEOVER': `플레이어가 최종 점수 ${score}점, ${linesCleared}줄로 게임오버 되었습니다. 재치있는 위로와 격려의 1문장 소감을 써주세요.`
+            };
+
+            const prompt = promptMap[event] || `현재 점수: ${score}, 레벨: ${level}. 유쾌한 1문장 아케이드 게임 해설을 작성해주세요.`;
+
+            try {
+                aiBox.classList.add('opacity-50');
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                aiBox.classList.remove('opacity-50');
+
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    aiBox.innerHTML = `"${data.candidates[0].content.parts[0].text.trim()}"`;
+                }
+            } catch (err) {
+                console.error("Gemini API Error:", err);
+                aiBox.classList.remove('opacity-50');
+            }
+        }
+
+        // Modal Helpers
+        function openSettingsModal() {
+            document.getElementById('apiKeyInput').value = localStorage.getItem('gemini_api_key') || '';
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (key) {
+                localStorage.setItem('gemini_api_key', key);
+                closeSettingsModal();
+                document.getElementById('aiCommentaryBox').innerText = '"Gemini API가 성공적으로 연동되었습니다! 즐겁게 플레이하세요!"';
+            }
+        }
+
+        function clearApiKey() {
+            localStorage.removeItem('gemini_api_key');
+            document.getElementById('apiKeyInput').value = '';
+            closeSettingsModal();
+            document.getElementById('aiCommentaryBox').innerText = '"API 키가 삭제되었습니다."';
+        }
+
+        function toggleHelpModal() {
+            document.getElementById('helpModal').classList.toggle('hidden');
+        }
+
+        // Initialize Canvas Elements on Window Load
+        window.onload = () => {
+            canvas = document.getElementById('tetrisCanvas');
+            ctx = canvas.getContext('2d');
+
+            holdCanvas = document.getElementById('holdCanvas');
+            holdCtx = holdCanvas.getContext('2d');
+
+            nextCanvas = document.getElementById('nextCanvas');
+            nextCtx = nextCanvas.getContext('2d');
+
+            draw();
+            drawSideCanvases();
+        };
+    </script>
+</body>
+</html>
