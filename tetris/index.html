@@ -6,6 +6,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <title>모바일 테트리스</title>
+  <meta name="description" content="터치 버튼과 스와이프로 바로 즐기는 모바일 테트리스 웹앱" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <meta name="theme-color" content="#070b14" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="모바일 테트리스" />
+  <meta property="og:description" content="터치 버튼과 스와이프로 바로 즐기는 모바일 테트리스 웹앱" />
+  <meta property="og:url" content="https://kimtaeyoun0917.github.io/gemini-block-cascade/tetris/" />
+  <meta property="og:image" content="https://kimtaeyoun0917.github.io/gemini-block-cascade/tetris/icon-512.png" />
   <style>
     :root {
       --bg-main: #070b14;
@@ -1344,6 +1353,11 @@
       // 초기 준비 상태
       resetGame(false);
       requestAnimationFrame(loop);
+
+      // PWA: 서비스 워커 등록 (오프라인 실행)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+      }
     })();
   </script>
 </body>
