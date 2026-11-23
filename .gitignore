@@ -1,0 +1,10 @@
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/tetris.apk
+android/tetris.apk.sha256
+
+# 빌드 시 tetris/ 에서 복사되는 웹 자산
+android/app/src/main/assets/www/*
+!android/app/src/main/assets/www/.gitkeep
